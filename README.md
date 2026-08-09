@@ -79,7 +79,7 @@ SentinelAPI is deployed as a live security gateway with a SOC-style web console.
 
 ### Demo Access
 
-Use the following read/write demo account to explore the deployed security console:
+Use the following demo account to explore the deployed security console:
 
 - **Email:** `demo@sentinelapi.dev`
 - **Password:** `SentinelDemo-2026!`
