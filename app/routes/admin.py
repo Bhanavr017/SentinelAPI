@@ -31,12 +31,15 @@ router = APIRouter(
 def serialize_event(event: SecurityEvent) -> dict:
     return {
         "id": event.id,
+        "request_id": event.request_id,
         "ip_address": event.ip_address,
         "method": event.method,
         "path": event.path,
         "attack_type": event.attack_type,
         "risk_score": event.risk_score,
         "risk_level": event.risk_level,
+        "action": event.action,
+        "source": event.source,
         "user_agent": event.user_agent,
         "created_at": (
             event.created_at.isoformat()
@@ -279,8 +282,17 @@ async def get_security_stats(
 
     recent_events = recent_result.scalars().all()
 
+    blocked_result = await db.execute(
+        select(func.count(SecurityEvent.id)).where(
+            SecurityEvent.action == "BLOCKED"
+        )
+    )
+    blocked_events = blocked_result.scalar_one()
+
     return {
         "total_events": total_events,
+        "detected_events": total_events,
+        "blocked_events": blocked_events,
         "average_risk_score": average_score,
         "risk_levels": risk_levels,
         "attack_types": attack_types,

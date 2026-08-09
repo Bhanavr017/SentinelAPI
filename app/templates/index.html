@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SentinelAPI Security Dashboard</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/security.css">
 </head>
 
 <body>
@@ -28,6 +29,11 @@
                 <button class="nav-item" data-section="detection">
                     <span>⌁</span>
                     Detection
+                </button>
+
+                <button class="nav-item" data-section="gateway">
+                    <span>⇥</span>
+                    Gateway
                 </button>
 
                 <button class="nav-item" data-section="events">
@@ -126,6 +132,16 @@
                         <div class="stat-label">AVERAGE RISK</div>
                         <div id="averageRisk" class="stat-value">0</div>
                         <div class="stat-meta">Average risk score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">BLOCKED</div>
+                        <div id="blockedEvents" class="stat-value">0</div>
+                        <div class="stat-meta">Requests blocked by policy</div>
+                    </div>
+                    <div class="stat-card high">
+                        <div class="stat-label">DETECTIONS</div>
+                        <div id="detectedEvents" class="stat-value">0</div>
+                        <div class="stat-meta">Threats recorded</div>
                     </div>
 
                 </div>
@@ -242,6 +258,37 @@
 
                 </div>
 
+            </section>
+
+            <!-- GATEWAY -->
+            <section id="gatewaySection" class="content-section hidden">
+                <div class="section-heading">
+                    <p class="eyebrow">AUTOMATIC ENFORCEMENT</p>
+                    <h2>Security Gateway</h2>
+                    <p>
+                        Send a real HTTP request through SentinelAPI.
+                        Safe traffic is forwarded to the configured upstream.
+                        Malicious traffic is blocked before forwarding.
+                    </p>
+                </div>
+                <div class="panel detection-panel">
+                    <form id="gatewayForm">
+                        <label for="gatewayMethod">HTTP Method</label>
+                        <select id="gatewayMethod">
+                            <option>GET</option>
+                            <option>POST</option>
+                            <option>PUT</option>
+                            <option>PATCH</option>
+                            <option>DELETE</option>
+                        </select>
+                        <label for="gatewayPath">Gateway Path</label>
+                        <input id="gatewayPath" type="text" value="/protected/echo?demo=sentinel" required>
+                        <label for="gatewayBody">Request Body</label>
+                        <textarea id="gatewayBody" placeholder='{"message":"hello"}'></textarea>
+                        <button type="submit" class="primary-btn">Send Through Gateway</button>
+                    </form>
+                    <div id="gatewayResult" class="detection-result hidden"></div>
+                </div>
             </section>
 
             <!-- EVENTS -->

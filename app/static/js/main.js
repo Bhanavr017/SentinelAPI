@@ -41,6 +41,7 @@ function showLogin() {
     $("dashboardSection").classList.add("hidden");
     $("detectionSection").classList.add("hidden");
     $("eventsSection").classList.add("hidden");
+    $("gatewaySection").classList.add("hidden");
 }
 
 function showDashboard() {
@@ -128,7 +129,23 @@ async function login(email, password) {
     await loadDashboard();
 }
 
-function logout() {
+async function logout() {
+    const token = state.token;
+
+    try {
+        if (token) {
+            await fetch("/auth/logout", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                cache: "no-store",
+            });
+        }
+    } catch {
+        // Continue local cleanup even if the server is unavailable.
+    }
+
     state.token = "";
     localStorage.removeItem("sentinel_token");
 
@@ -266,6 +283,12 @@ async function loadStats() {
     $("highEvents").textContent =
         data.risk_levels?.HIGH ?? 0;
 
+$("blockedEvents").textContent =
+    data.blocked_events ?? 0;
+
+$("detectedEvents").textContent =
+    data.detected_events ?? 0;
+
     renderBarChart(
         "riskChart",
         data.risk_levels || {}
@@ -347,10 +370,13 @@ async function runDetection(event) {
     }
 
     try {
-        const result = await apiRequest("/detect", {
+        const response = await fetch("/detect", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                ...(state.token
+                    ? { Authorization: `Bearer ${state.token}` }
+                    : {})
             },
             body: JSON.stringify({
                 url,
@@ -359,7 +385,43 @@ async function runDetection(event) {
             })
         });
 
-        const attacks = result.attacks || [];
+        let result = null;
+
+        try {
+            result = await response.json();
+        } catch {
+            result = {
+                detail: await response.text()
+            };
+        }
+
+        const detected =
+            result.detected ??
+            (response.status >= 400);
+
+        const blocked =
+            result.blocked ??
+            (response.status === 403);
+
+        const score =
+            result.score ??
+            result.risk_score ??
+            0;
+
+        const level =
+            result.level ??
+            result.risk_level ??
+            "NONE";
+
+        const attacks =
+            result.attacks ??
+            result.detected_attacks ??
+            [];
+
+        const reason =
+            result.reason ??
+            result.detail ??
+            "No attack patterns detected";
 
         $("detectionResult").classList.remove("hidden");
 
@@ -368,49 +430,183 @@ async function runDetection(event) {
                 <div>
                     <div class="stat-label">DETECTION RESULT</div>
                     <div class="result-score">
-                        ${escapeHtml(result.score ?? 0)}
+                        ${escapeHtml(score)}
                     </div>
                 </div>
 
-                <span class="badge ${levelClass(result.level)}">
-                    ${escapeHtml(result.level ?? "NONE")}
+                <span class="badge ${
+                    level === "CRITICAL"
+                        ? "badge-critical"
+                        : level === "HIGH"
+                            ? "badge-high"
+                            : level === "MEDIUM"
+                                ? "badge-medium"
+                                : "badge-low"
+                }">
+                    ${escapeHtml(level)}
                 </span>
             </div>
 
             <p>
                 <strong>Detected:</strong>
-                ${result.detected ? "YES" : "NO"}
+                ${detected ? "YES" : "NO"}
             </p>
 
             <p>
                 <strong>Blocked:</strong>
-                ${result.blocked ? "YES" : "NO"}
+                ${blocked ? "YES" : "NO"}
+            </p>
+
+            <p>
+                <strong>HTTP Status:</strong>
+                ${escapeHtml(response.status)}
             </p>
 
             <p>
                 <strong>Reason:</strong>
-                ${escapeHtml(result.reason ?? "-")}
+                ${escapeHtml(reason)}
             </p>
 
             <div class="result-attacks">
                 ${
                     attacks.length
                         ? attacks.map(
-                              (attack) =>
-                                  `<span class="attack-chip">
+                            (attack) =>
+                                `<span class="attack-chip">
                                     ${escapeHtml(attack)}
-                                  </span>`
+                                </span>`
                           ).join("")
                         : '<span class="attack-chip">No attack detected</span>'
                 }
             </div>
         `;
 
-        showToast("Detection completed");
+        showToast(
+            blocked
+                ? "Malicious request blocked"
+                : detected
+                    ? "Threat detected"
+                    : "Request analyzed"
+        );
 
     } catch (error) {
         $("detectionResult").classList.remove("hidden");
+
         $("detectionResult").innerHTML =
+            `<div class="message">
+                ${escapeHtml(error.message)}
+            </div>`;
+    }
+}
+
+async function runGateway(event) {
+    event.preventDefault();
+
+    const method = $("gatewayMethod").value;
+    let path = $("gatewayPath").value.trim();
+
+    if (!path.startsWith("/")) {
+        path = "/" + path;
+    }
+
+    const body = $("gatewayBody").value;
+
+    const headers = state.token
+        ? { Authorization: `Bearer ${state.token}` }
+        : {};
+
+    try {
+        const response = await fetch(`/gateway${path}`, {
+            method,
+            headers: body
+                ? {
+                      ...headers,
+                      "Content-Type": "application/json",
+                  }
+                : headers,
+            body: ["GET", "HEAD"].includes(method)
+                ? undefined
+                : body || undefined,
+        });
+
+        /*
+         * Read the response body exactly once.
+         * Trying response.json() and then response.text()
+         * consumes the same browser Response stream twice.
+         */
+        const rawBody = await response.text();
+
+        let payload;
+
+        try {
+            payload = JSON.parse(rawBody);
+        } catch {
+            payload = rawBody;
+        }
+
+        const decision =
+            response.headers.get("X-Sentinel-Decision") || "UNKNOWN";
+
+        const score =
+            response.headers.get("X-Sentinel-Risk-Score") || "n/a";
+
+        const requestId =
+            response.headers.get("X-Sentinel-Request-ID") || "n/a";
+
+        $("gatewayResult").classList.remove("hidden");
+
+        $("gatewayResult").innerHTML = `
+            <div class="result-header">
+                <div>
+                    <div class="stat-label">GATEWAY DECISION</div>
+                    <div class="result-score">
+                        ${escapeHtml(response.status)}
+                    </div>
+                </div>
+
+                <span class="badge ${
+                    response.ok ? "badge-low" : "badge-critical"
+                }">
+                    ${escapeHtml(decision)}
+                </span>
+            </div>
+
+            <p>
+                <strong>HTTP Status:</strong>
+                ${escapeHtml(response.status)}
+            </p>
+
+            <p>
+                <strong>Risk Score:</strong>
+                ${escapeHtml(score)}
+            </p>
+
+            <p>
+                <strong>Request ID:</strong>
+                ${escapeHtml(requestId)}
+            </p>
+
+            <p><strong>Response:</strong></p>
+
+            <pre class="gateway-response">${escapeHtml(
+                typeof payload === "string"
+                    ? payload
+                    : JSON.stringify(payload, null, 2)
+            )}</pre>
+        `;
+
+        showToast(
+            response.ok
+                ? "Request forwarded by gateway"
+                : "Request blocked by SentinelAPI"
+        );
+
+        await loadDashboard();
+
+    } catch (error) {
+        $("gatewayResult").classList.remove("hidden");
+
+        $("gatewayResult").innerHTML =
             `<div class="message">${escapeHtml(error.message)}</div>`;
     }
 }
@@ -457,6 +653,11 @@ $("reloadEventsBtn").addEventListener("click", async () => {
 $("detectionForm").addEventListener(
     "submit",
     runDetection
+);
+
+$("gatewayForm").addEventListener(
+    "submit",
+    runGateway
 );
 
 document.querySelectorAll(".nav-item").forEach((button) => {

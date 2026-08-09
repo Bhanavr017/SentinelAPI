@@ -10,6 +10,7 @@ from app.core.logger import logger
 
 from app.services.database import init_db
 from app.services.redis_service import redis_service
+from app.services.admin_bootstrap import bootstrap_admin
 
 # ----------------------------------------------------
 # Import database models
@@ -39,6 +40,9 @@ from app.middleware.request_logger import (
 from app.routes.auth import router as auth_router
 from app.routes.detect import router as detect_router
 from app.routes.admin import router as admin_router
+from app.routes.gateway import router as gateway_router
+from app.routes.jwks import router as jwks_router
+from app.routes.demo import router as demo_router
 
 # ----------------------------------------------------
 # Lifespan
@@ -63,6 +67,7 @@ async def lifespan(app: FastAPI):
     # ------------------------------------------------
 
     await init_db()
+    await bootstrap_admin()
 
     logger.info(
         "Database initialized"
@@ -105,7 +110,7 @@ app.mount(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -135,6 +140,9 @@ app.include_router(auth_router)
 app.include_router(detect_router)
 
 app.include_router(admin_router)
+app.include_router(gateway_router)
+app.include_router(jwks_router)
+app.include_router(demo_router)
 
 # ----------------------------------------------------
 # Root
