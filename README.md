@@ -1,64 +1,72 @@
+cd ~/Documents/Project/SentinelAPI
+
+cat > README.md <<'EOF'
 # SentinelAPI
 
-SentinelAPI is a FastAPI-based API security gateway that automatically inspects incoming HTTP traffic before it reaches protected API routes or an upstream service.
+**Production-deployed API security gateway for automated abuse detection, risk-based prevention, authentication, and protected upstream API forwarding.**
 
-## Security capabilities
+SentinelAPI inspects incoming HTTP requests, normalizes and analyzes security-relevant request data, assigns a risk score, and automatically allows or blocks traffic before forwarding permitted requests to an upstream API.
 
-- Automatic request interception
-- Method/path/query/body/header inspection
-- URL-decoding normalization
-- SQL injection detection
-- XSS detection
-- Path traversal detection
-- Command injection detection
-- Authentication-abuse detection
-- 0-100 risk scoring
-- Automatic high/critical blocking
-- Redis-backed rate limiting and temporary IP blocking
-- Persistent PostgreSQL security events
-- Request IDs and security decision headers
-- Reverse proxy under `/gateway/*`
-- JWT authentication with username-or-email login
-- RS256 JWT signing with key IDs and public JWKS endpoint
-- Role-based admin authorization
-- Admin event investigation and statistics
-- SOC-style dashboard
-- OpenAPI / Swagger
-- Automated pytest regression tests
-- Render deployment
+It was built as a production-oriented evolution of an API abuse detection and prevention system, expanding the original detection capability into a complete security gateway with authentication, authorization, security telemetry, persistent event storage, and cloud deployment.
 
-## Request flow
+## Live Demo
+
+**Production:**
+https://sentinelapi-o9rl.onrender.com
+
+**Swagger UI:**
+https://sentinelapi-o9rl.onrender.com/docs
+
+**OpenAPI:**
+https://sentinelapi-o9rl.onrender.com/openapi.json
+
+**JWKS:**
+https://sentinelapi-o9rl.onrender.com/.well-known/jwks.json
+
+**GitHub:**
+https://github.com/Bhanavr017/SentinelAPI
+
+## What SentinelAPI Does
+
+SentinelAPI operates as an automated security layer between clients and an upstream API.
 
 ```text
-Client -> SentinelAPI Gateway -> Request Inspection
-                                  |-- malicious -> 403 + event
-                                  |-- safe -----> Upstream API
-```
+                         Client
+                           |
+                           v
+                 +-------------------+
+                 |    SentinelAPI    |
+                 |  Security Gateway  |
+                 +---------+---------+
+                           |
+              +------------+-------------+
+              |                          |
+              v                          v
+       Request Inspection          Rate Limiting
+              |                          |
+              +------------+-------------+
+                           |
+                           v
+                  Detection Engine
+                           |
+              +------------+-------------+
+              |                          |
+              v                          v
+       Attack Classification       Risk Scoring
+              |                          |
+              +------------+-------------+
+                           |
+                           v
+                    Policy Decision
+                    /             \
+                   /               \
+                BLOCK             ALLOW
+                  |                  |
+                  v                  v
+          Security Event       Upstream API
+          + PostgreSQL               |
+                                     v
+                              API Response
 
-## Live gateway demo
-
-```bash
-curl -i "https://YOUR-SENTINEL-URL/gateway/anything?demo=hello"
-curl -i "https://YOUR-SENTINEL-URL/gateway/anything?id=1%27%20OR%20%271%27%3D%271"
-```
-
-The malicious request should be rejected before forwarding.
-
-## JWKS
-
-Configure `JWT_PRIVATE_KEY_B64`, `JWT_KID`, `JWT_ISSUER`, and `JWT_AUDIENCE` in Render. `JWT_ALGORITHM=RS256` is set by the deployment blueprint. Public keys are exposed at `/.well-known/jwks.json`.
-
-## Admin bootstrap
-
-Configure `BOOTSTRAP_ADMIN_EMAIL=admin@example.com`. The startup migration promotes that existing account to `role=admin` and `is_admin=true`, so Render Shell is not required.
-
-## Validation
-
-```bash
-source .venv/bin/activate
-python -m compileall -q app
-python -m pytest -q
-python -m pytest -q tests/test_gateway.py
-
-git diff --check
-```
+        Redis <---- Rate limits / temporary blocking
+        PostgreSQL <- Persistent security events
