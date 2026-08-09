@@ -12,13 +12,18 @@ class AuthService:
     def __init__(self, user_service: UserService):
         self.user_service = user_service
 
-    async def authenticate(self, email: str, password: str):
-        user = await self.user_service.get_by_email(email)
+    async def authenticate(self, identifier: str, password: str):
+        user = await self.user_service.get_by_login_identifier(
+            identifier
+        )
 
         if user is None:
             return None
 
-        if not verify_password(password, user.hashed_password):
+        if not verify_password(
+            password,
+            user.hashed_password,
+        ):
             return None
 
         return user
