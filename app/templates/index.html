@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinelAPI Security Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">S</div>
+                <div>
+                    <h1>SentinelAPI</h1>
+                    <span>Security Console</span>
+                </div>
+            </div>
+
+            <nav>
+                <button class="nav-item active" data-section="dashboard">
+                    <span>▦</span>
+                    Dashboard
+                </button>
+
+                <button class="nav-item" data-section="detection">
+                    <span>⌁</span>
+                    Detection
+                </button>
+
+                <button class="nav-item" data-section="events">
+                    <span>◉</span>
+                    Security Events
+                </button>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div id="connectionStatus" class="connection">
+                    <span class="status-dot"></span>
+                    <span>API checking...</span>
+                </div>
+
+                <button id="logoutBtn" class="logout-btn">
+                    Logout
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">SECURITY OPERATIONS</p>
+                    <h2>Threat Monitoring Dashboard</h2>
+                </div>
+
+                <div class="topbar-actions">
+                    <span id="lastUpdated">Not updated</span>
+                    <button id="refreshBtn" class="refresh-btn">
+                        Refresh
+                    </button>
+                </div>
+            </header>
+
+            <!-- LOGIN -->
+            <section id="loginSection" class="login-screen">
+                <div class="login-card">
+                    <div class="login-icon">S</div>
+                    <h2>SentinelAPI</h2>
+                    <p>Authenticate to access the security console.</p>
+
+                    <form id="loginForm">
+                        <label for="email">Email</label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            placeholder="admin@example.com"
+                            required
+                        >
+
+                        <label for="password">Password</label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            placeholder="Password"
+                            required
+                        >
+
+                        <button type="submit" class="primary-btn">
+                            Sign In
+                        </button>
+
+                        <div id="loginMessage" class="message"></div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- DASHBOARD -->
+            <section id="dashboardSection" class="content-section hidden">
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <div class="stat-label">TOTAL EVENTS</div>
+                        <div id="totalEvents" class="stat-value">0</div>
+                        <div class="stat-meta">Recorded security events</div>
+                    </div>
+
+                    <div class="stat-card critical">
+                        <div class="stat-label">CRITICAL</div>
+                        <div id="criticalEvents" class="stat-value">0</div>
+                        <div class="stat-meta">Critical risk events</div>
+                    </div>
+
+                    <div class="stat-card high">
+                        <div class="stat-label">HIGH RISK</div>
+                        <div id="highEvents" class="stat-value">0</div>
+                        <div class="stat-meta">High risk events</div>
+                    </div>
+
+                    <div class="stat-card score">
+                        <div class="stat-label">AVERAGE RISK</div>
+                        <div id="averageRisk" class="stat-value">0</div>
+                        <div class="stat-meta">Average risk score</div>
+                    </div>
+
+                </div>
+
+                <div class="dashboard-grid">
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Risk Distribution</h3>
+                                <p>Security events by severity</p>
+                            </div>
+                        </div>
+
+                        <div id="riskChart" class="bar-chart"></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Attack Types</h3>
+                                <p>Detected attack categories</p>
+                            </div>
+                        </div>
+
+                        <div id="attackChart" class="bar-chart"></div>
+                    </div>
+
+                </div>
+
+                <div class="panel events-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Recent Security Events</h3>
+                            <p>Latest events recorded by SentinelAPI</p>
+                        </div>
+
+                        <button id="loadEventsBtn" class="secondary-btn">
+                            Load Events
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>IP Address</th>
+                                    <th>Method</th>
+                                    <th>Path</th>
+                                    <th>Attack</th>
+                                    <th>Risk</th>
+                                    <th>Level</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="eventsTable">
+                                <tr>
+                                    <td colspan="7" class="empty">
+                                        No events loaded.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- DETECTION -->
+            <section id="detectionSection" class="content-section hidden">
+
+                <div class="section-heading">
+                    <p class="eyebrow">LIVE ANALYSIS</p>
+                    <h2>Request Detection</h2>
+                    <p>
+                        Submit an HTTP request representation to the SentinelAPI
+                        detection engine.
+                    </p>
+                </div>
+
+                <div class="panel detection-panel">
+
+                    <form id="detectionForm">
+
+                        <label for="detectionUrl">Request URL</label>
+                        <input
+                            id="detectionUrl"
+                            type="text"
+                            placeholder="/login?id=1"
+                            required
+                        >
+
+                        <label for="detectionBody">Request Body</label>
+                        <textarea
+                            id="detectionBody"
+                            placeholder="Optional request body"
+                        ></textarea>
+
+                        <label for="detectionHeaders">Headers</label>
+                        <textarea
+                            id="detectionHeaders"
+                            placeholder='{"User-Agent":"SentinelAPI Dashboard"}'
+                        ></textarea>
+
+                        <button type="submit" class="primary-btn">
+                            Analyze Request
+                        </button>
+
+                    </form>
+
+                    <div id="detectionResult" class="detection-result hidden">
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- EVENTS -->
+            <section id="eventsSection" class="content-section hidden">
+
+                <div class="section-heading">
+                    <p class="eyebrow">INVESTIGATION</p>
+                    <h2>Security Events</h2>
+                    <p>
+                        Review recent security events recorded by the API.
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <div class="toolbar">
+                        <button id="reloadEventsBtn" class="primary-btn">
+                            Refresh Events
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>IP</th>
+                                    <th>Method</th>
+                                    <th>Path</th>
+                                    <th>Attack</th>
+                                    <th>Score</th>
+                                    <th>Level</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="allEventsTable">
+                                <tr>
+                                    <td colspan="7" class="empty">
+                                        No events loaded.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

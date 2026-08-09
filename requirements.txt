@@ -1,0 +1,36 @@
+# Web API
+fastapi
+uvicorn
+
+# Database
+sqlalchemy
+aiosqlite
+asyncpg
+
+# Redis
+redis
+
+# Configuration
+python-dotenv
+pydantic
+pydantic-settings
+
+# Authentication and security
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt
+python-multipart
+email-validator
+
+# Templates
+jinja2
+
+# HTTP client and testing
+httpx
+pytest
+
+# Data / ML
+scikit-learn
+pandas
+numpy
+joblib
