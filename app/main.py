@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.logger import logger
 
-from app.services.database import init_db
+from app.services.database import init_db, AsyncSessionLocal
 from app.services.redis_service import redis_service
 from app.services.admin_bootstrap import bootstrap_admin
 
@@ -170,9 +170,32 @@ async def root():
     tags=["System"],
 )
 async def health():
+    from fastapi.responses import JSONResponse
+    from sqlalchemy import text
 
-    return {
-        "status": "healthy",
-        "redis": "connected",
-        "database": "connected",
-    }
+    redis_ok = False
+    database_ok = False
+
+    try:
+        await redis_service.client.ping()
+        redis_ok = True
+    except Exception:
+        redis_ok = False
+
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        database_ok = True
+    except Exception:
+        database_ok = False
+
+    healthy = redis_ok and database_ok
+
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={
+            "status": "healthy" if healthy else "degraded",
+            "redis": "connected" if redis_ok else "unavailable",
+            "database": "connected" if database_ok else "unavailable",
+        },
+    )
