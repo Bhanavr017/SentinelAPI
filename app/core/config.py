@@ -25,3 +25,13 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+# Render provides PostgreSQL URLs using the standard
+# postgresql:// scheme. SQLAlchemy's async engine
+# requires the asyncpg driver explicitly.
+if settings.DATABASE_URL.startswith("postgresql://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+asyncpg://",
+        1,
+    )
